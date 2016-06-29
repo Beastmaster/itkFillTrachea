@@ -35,13 +35,13 @@ Description:
 int main(int argc, char** argv)
 {
 	const unsigned int Dimension = 3;
-	typedef unsigned char							PixelType;
-	typedef itk::Image<unsigned char, Dimension>	ImageType;
-	typedef itk::Image<unsigned char, Dimension - 1>	Image2DType;
+	typedef float							PixelType;
+	typedef itk::Image<PixelType, Dimension>	ImageType;
+	typedef itk::Image<PixelType, Dimension - 1>	Image2DType;
 
 	//std::string fixed_name = argv[1];
 	//std::string moving_name = argv[2];
-	std::string fixed_name = "E:/test/ch2.nii";
+	std::string fixed_name = "E:/test/20140420_155338s002a1001.nii";
 	std::string moving_name = "E:/test/reference_brain_res.nii";
 	std::string out_name = "E:/test/reference_brain_reg.nii";
 
@@ -60,15 +60,6 @@ int main(int argc, char** argv)
 		reOrientor->Update();
 		img = reOrientor->GetOutput();
 	};
-	//auto reader2 = NiftiReaderType::New();
-	//reader2->SetFileName(moving_name);
-	//reader2->Update();
-	//auto reOrientor2 = ReOrientorType::New();
-	//reOrientor2->UseImageDirectionOn();
-	//reOrientor2->SetDesiredCoordinateOrientation(itk::SpatialOrientation::ITK_COORDINATE_ORIENTATION_RAI);
-	//reOrientor2->SetInput(reader2->GetOutput());
-	//auto moving_image = reOrientor2->GetOutput();
-
 
 	auto fix_image = ImageType::New();
 	auto moving_image = ImageType::New();

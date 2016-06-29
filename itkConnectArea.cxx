@@ -29,8 +29,10 @@ Description:
 #include "itkBinaryFillholeImageFilter.h"
 #include "itkVotingBinaryHoleFillingImageFilter.h"
 
-
-
+#include "itkFlatStructuringElement.h"
+#include "itkBinaryDilateImageFilter.h"
+#include "itkOrImageFilter.h"
+#include "itkChangeInformationImageFilter.h"
 
 int main1(int argc, char** argv)
 {
@@ -205,10 +207,9 @@ int main1(int argc, char** argv)
 	unsigned char lowerThreshold = 10;
 	unsigned char upperThreshold = 255;
 	typedef itk::BinaryThresholdImageFilter <Image2DType, Image2DType>
-		BinaryThresholdImageFilterType;
+		BinaryThresholdImageFilter2DType;
 
-	BinaryThresholdImageFilterType::Pointer thresholdFilter
-		= BinaryThresholdImageFilterType::New();
+	auto thresholdFilter = BinaryThresholdImageFilter2DType::New();
 	thresholdFilter->SetInput(ImageSlice);
 	//thresholdFilter->SetInput(niftiReader->GetOutput());
 	thresholdFilter->SetLowerThreshold(lowerThreshold);
@@ -292,11 +293,91 @@ int main1(int argc, char** argv)
 		}
 	}
 
+	//=== Read brain, run image dilate and  OR
+	std::cout << "Running Dilation ...."<<std::endl;
+	auto brain_reader = NiftiReaderType::New();
+	brain_reader->SetFileName("E:/test/reference_brain_aal.nii");
+	auto reOrientor2 = ReOrientorType::New();
+	reOrientor2->UseImageDirectionOn();
+	reOrientor2->SetDesiredCoordinateOrientation(itk::SpatialOrientation::ITK_COORDINATE_ORIENTATION_RAI);
+	reOrientor2->SetInput(brain_reader->GetOutput());
+	reOrientor2->Update();
+	lowerThreshold = 1;
+	upperThreshold = 255;
+	typedef itk::BinaryThresholdImageFilter <ImageType, ImageType>
+		BinaryThresholdImageFilterType;
+	auto thresholdbrainFilter = BinaryThresholdImageFilterType::New();
+	thresholdbrainFilter->SetInput(reOrientor2->GetOutput());
+	//thresholdFilter->SetInput(niftiReader->GetOutput());
+	thresholdbrainFilter->SetLowerThreshold(lowerThreshold);
+	thresholdbrainFilter->SetUpperThreshold(upperThreshold);
+	thresholdbrainFilter->SetInsideValue(255);
+	thresholdbrainFilter->SetOutsideValue(0);
+	thresholdbrainFilter->Update();
+
+	// image dilate
+	typedef itk::FlatStructuringElement< Dimension >
+		StructuringElementType;
+	StructuringElementType::RadiusType radius;
+	radius.Fill(10.0);
+	StructuringElementType structuringElement =
+		StructuringElementType::Ball(radius);
+
+	typedef itk::BinaryDilateImageFilter< ImageType, ImageType,
+		StructuringElementType > BinaryDilateImageFilterType;
+
+	BinaryDilateImageFilterType::Pointer dilateFilter =
+		BinaryDilateImageFilterType::New();
+	dilateFilter->SetInput(thresholdbrainFilter->GetOutput());
+	dilateFilter->SetKernel(structuringElement);
+	dilateFilter->Update();
+
+	//== Threshold and run OR operator
+	std::cout << "Running OR operator ...." << std::endl;
+	lowerThreshold = 10;
+	upperThreshold = 255;
+	auto thresholdheadFilter = BinaryThresholdImageFilterType::New();
+	thresholdheadFilter->SetInput(Image);
+	thresholdheadFilter->SetLowerThreshold(lowerThreshold);
+	thresholdheadFilter->SetUpperThreshold(upperThreshold);
+	thresholdheadFilter->SetInsideValue(255);
+	thresholdheadFilter->SetOutsideValue(0);
+	thresholdheadFilter->Update();
+
+	//typedef itk::ChangeInformationImageFilter< ImageType > InfoFilterType;
+	//auto infoFilter = InfoFilterType::New();
+	//infoFilter->SetInput(thresholdbrainFilter->GetOutput());
+	//const ImageType::DirectionType direction = thresholdheadFilter->GetOutput()->GetDirection();
+	//const ImageType::SpacingType   spacing = thresholdheadFilter->GetOutput()->GetSpacing();
+	//infoFilter->SetOutputDirection(direction);
+	//infoFilter->SetOutputSpacing(spacing);
+	//infoFilter->ChangeDirectionOn();
+	//infoFilter->ChangeSpacingOn();
+	//infoFilter->UpdateOutputInformation();
+	//infoFilter->Update();
+
+	typedef itk::OrImageFilter <ImageType,ImageType,ImageType> OrImageFilterType;
+	OrImageFilterType::Pointer orFilter = OrImageFilterType::New();
+	orFilter->SetInput1(thresholdheadFilter->GetOutput());
+	orFilter->SetInput2(dilateFilter->GetOutput());
+	orFilter->SetCoordinateTolerance(0.01);
+	try
+	{
+		std::cout << "Writing to file" << std::endl;
+		orFilter->Update();
+	}
+	catch (itk::ExceptionObject& e)
+	{
+		std::cout << "Writing to file process error!" << std::endl;
+		std::cout << e;
+	}
+
 	// write to image
 	typedef itk::ImageFileWriter<ImageType> NiftiWriterType;;
 	auto niftiWriter = NiftiWriterType::New();
-	niftiWriter->SetFileName("E:/test/reference_brain_output.nii");
-	niftiWriter->SetInput(Image);
+	niftiWriter->SetFileName("E:/test/reference_brain_aaldilate.nii");
+	//niftiWriter->SetInput(Image);
+	niftiWriter->SetInput(orFilter->GetOutput());
 	try
 	{
 		std::cout << "Writing to file" << std::endl;
