@@ -4,7 +4,7 @@ Date: 2016/6/28
 Description:
 	Use itk-gdcm to read a dicom series
 	Test itk-vtk bridge function
-	Test registration function
+	
 */
 
 #include "itkImageSeriesReader.h"

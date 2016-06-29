@@ -24,6 +24,7 @@
 #include "itkCommand.h"
 #include "itkImageDuplicator.h"
 #include "itkNormalizeImageFilter.h"
+#include "itkGradientDescentOptimizer.h"
 
 #include "itkNormalizedCorrelationImageToImageMetric.h"
 
@@ -35,8 +36,10 @@ public:
     typedef itk::Image< MovingImagePixelType, 3 > MovingImageType;
     typedef itk::Image< ThirdImagePixelType, 3 > ThirdImageType;
     typedef itk::Image< double, 3 > InternalImageType;
-    typedef itk::VersorRigid3DTransform< double > TransformType;
-    typedef itk::VersorRigid3DTransformOptimizer OptimizerType;
+    //typedef itk::VersorRigid3DTransform< double > TransformType;	 //  Rigid3D transform
+    //typedef itk::VersorRigid3DTransformOptimizer OptimizerType;    //  Rigid3D transform
+	typedef itk::AffineTransform< double, 3 > 	TransformType;   // Affine Transform
+	typedef itk::GradientDescentOptimizer                   OptimizerType;	 // Affine Transform
     typedef itk::MattesMutualInformationImageToImageMetric< InternalImageType, InternalImageType > MetricType;
     //typedef itk::NormalizedCorrelationImageToImageMetric< InternalImageType, InternalImageType > MetricType;
     typedef itk::LinearInterpolateImageFunction< InternalImageType, double > InterpolatorType;
@@ -86,6 +89,9 @@ public:
     
     virtual int ApplyTransformToImage( typename ThirdImageType::Pointer input, typename ThirdImageType::Pointer &output );
     
+	virtual int SetTransformTypeToAffine();
+	virtual int SetTransformTypeToRidigBody();
+
 	TransformType::Pointer GetTranformMatrix(void) {return m_transform;};
 	void SetMaximumStepLength(double max) {this->max_step_length = max;};
 	void SetMinimumStepLength(double min) {this->min_step_length = min;};

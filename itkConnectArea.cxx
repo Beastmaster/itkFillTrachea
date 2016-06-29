@@ -32,7 +32,7 @@ Description:
 
 
 
-int main(int argc, char** argv)
+int main1(int argc, char** argv)
 {
 	const unsigned int Dimension = 3;
 	typedef unsigned char							PixelType;

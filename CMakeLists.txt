@@ -13,12 +13,16 @@ include(${VTK_USE_FILE})
  SRCS
  itkConnectArea.cxx
  itk2vtkReadDicom.cxx
+ itkRegistrationTest.cxx
+ )
+ 
+ set(
+ HEAD
  Register.h
  Register.hpp
  )
  
- 
-add_executable(${PRJ} MACOSX_BUNDLE ${SRCS})
+add_executable(${PRJ} MACOSX_BUNDLE ${SRCS} ${HEAD})
 
 target_link_libraries(${PRJ} ITKReview  ${ITK_LIBRARIES})
 target_link_libraries(${PRJ} ${VTK_LIBRARIES})

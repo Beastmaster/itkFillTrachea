@@ -60,7 +60,7 @@ int Register<FixedImagePixelType, MovingImagePixelType, ThirdImagePixelType>::Se
         return 1;
     }
     m_normalizedFixedImage = normalizeFilter->GetOutput();
-    
+
     return 0;
 }
 
@@ -123,37 +123,54 @@ int Register<FixedImagePixelType, MovingImagePixelType, ThirdImagePixelType>::Ge
     registration->SetTransform( transform );
     registration->SetFixedImage( m_normalizedFixedImage ) ;
     registration->SetMovingImage( m_normalizedMovingImage );
+
+	//FixedImageType::RegionType fixedImageRegion = m_normalizedFixedImage->GetBufferedRegion();
+	FixedImageType::RegionType fixedImageRegion = m_normalizedFixedImage->GetLargestPossibleRegion();
+	registration->SetFixedImageRegion(fixedImageRegion);
     
-    /*typedef TransformType::VersorType VersorType;
-    typedef VersorType::VectorType VectorType;    
-    VersorType     rotation;
-    VectorType     axis;
-    axis[0] = 0.0;
-    axis[1] = 0.0;
-    axis[2] = 1.0;
-    const double angle = 0;
-    rotation.Set(  axis, angle  );
-    transform->SetRotation( rotation );*/
-    
-    transform->SetIdentity();
-    
-    registration->SetInitialTransformParameters( transform->GetParameters() );
-    
-    typedef OptimizerType::ScalesType OptimizerScalesType;
-    OptimizerScalesType optimizerScales( transform->GetNumberOfParameters() );
-    const double translationScale = 1.0/1000.0;
-    optimizerScales[0] = 1.0;
-    optimizerScales[1] = 1.0;
-    optimizerScales[2] = 1.0;
-    optimizerScales[3] = translationScale;
-    optimizerScales[4] = translationScale;
-    optimizerScales[5] = translationScale;
-    optimizer->SetScales( optimizerScales );
-    
-    optimizer->SetMaximumStepLength( this->max_step_length );//0.2000 
-    optimizer->SetMinimumStepLength( this->min_step_length );//0.0010
-    optimizer->SetNumberOfIterations( this->num_iteration );//500
-    
+
+	
+
+	//=== For Rigidbody transform optimizer ===//
+	//transform->SetIdentity();
+	//registration->SetInitialTransformParameters(transform->GetParameters());
+	//typedef OptimizerType::ScalesType OptimizerScalesType;
+	//OptimizerScalesType optimizerScales(transform->GetNumberOfParameters());
+	//const double translationScale = 1.0 / 1000.0;
+	//optimizerScales[0] = 1.0;
+	//optimizerScales[1] = 1.0;
+	//optimizerScales[2] = 1.0;
+	//optimizerScales[3] = translationScale;
+	//optimizerScales[4] = translationScale;
+	//optimizerScales[5] = translationScale;
+	//optimizer->SetScales(optimizerScales);
+    //optimizer->SetMaximumStepLength( this->max_step_length );//0.2000 
+    //optimizer->SetMinimumStepLength( this->min_step_length );//0.0010
+	//optimizer->SetNumberOfIterations(this->num_iteration);//500
+
+
+	//=== For Affine transform optimizer ===//
+	transform->SetIdentity();
+	typedef RegistrationType::ParametersType ParametersType;
+	ParametersType initialParameters(transform->GetNumberOfParameters());
+	//// rotation matrix (identity)
+	//initialParameters[0] = 1.0;  // R(0,0)
+	//initialParameters[1] = 0.0;  // R(0,1)
+	//initialParameters[2] = 0.0;  // R(1,0)
+	//initialParameters[3] = 1.0;  // R(1,1)
+	//// translation vector
+	//initialParameters[4] = 0.0;
+	//initialParameters[5] = 0.0;
+
+	registration->SetInitialTransformParameters(initialParameters);
+	const unsigned int numberOfPixels = fixedImageRegion.GetNumberOfPixels();
+	const unsigned int numberOfSamples = static_cast< unsigned int >(numberOfPixels * 0.01);
+	metric->SetNumberOfSpatialSamples(numberOfSamples);
+	optimizer->SetLearningRate(0.1);
+	optimizer->SetNumberOfIterations(this->num_iteration);//500
+	optimizer->MaximizeOn(); // We want to maximize mutual information (the default of the optimizer is to minimize)
+
+
     typename CommandIterationUpdate::Pointer observer = CommandIterationUpdate::New();
     optimizer->AddObserver( itk::IterationEvent(), observer );
     try
@@ -321,4 +338,19 @@ int Register<FixedImagePixelType, MovingImagePixelType, ThirdImagePixelType>::Ap
     output =  duplicator->GetOutput();*/
     
     return 0;
+}
+
+
+template < typename FixedImagePixelType, typename MovingImagePixelType, typename ThirdImagePixelType >
+int Register<FixedImagePixelType, MovingImagePixelType, ThirdImagePixelType>::SetTransformTypeToAffine()
+{
+
+	return 0;
+}
+
+template < typename FixedImagePixelType, typename MovingImagePixelType, typename ThirdImagePixelType >
+int Register<FixedImagePixelType, MovingImagePixelType, ThirdImagePixelType>::SetTransformTypeToRidigBody()
+{
+
+	return 0;
 }
