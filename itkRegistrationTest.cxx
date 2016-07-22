@@ -6,9 +6,13 @@ Description:
 	In this version, I use affine transform instead of rigidbody transform
 	
 	Transform point from with the affine transform we get
+
+	Command
+	ANTS.exe 3 -m MI["xxx.nii", ch2.nii, 1, 32] -i 0 -o newww.nii --rigid-affine false
+	WarpImageMultiTransform.exe 3 ch2.nii newdeformed.nii newwwAffine.txt -R xxx.nii
 */
 
-#include <string.h>
+#include <string>
 #include <stdio.h>
 #include "itkImage.h"
 #include "itkImageFileWriter.h"
@@ -24,73 +28,38 @@ Description:
 #include "itkBinaryFillholeImageFilter.h"
 #include "itkVotingBinaryHoleFillingImageFilter.h"
 
-
-
-
-#include "Register.h"
-
-
-
-
-int main(int argc, char** argv)
+int itkRegistrationTest()
 {
 	const unsigned int Dimension = 3;
-	typedef float							PixelType;
-	typedef itk::Image<PixelType, Dimension>	ImageType;
-	typedef itk::Image<PixelType, Dimension - 1>	Image2DType;
+	typedef float									PixelType;
+	typedef itk::Image<PixelType, Dimension>		ImageType;
 
-	//std::string fixed_name = argv[1];
-	//std::string moving_name = argv[2];
-	std::string fixed_name = "E:/test/20140420_155338s002a1001.nii";
-	std::string moving_name = "E:/test/reference_brain_res.nii";
-	std::string out_name = "E:/test/reference_brain_reg.nii";
+#pragma region Registration
 
-	// 1. read images
-	auto read_nifti = [](std::string name, ImageType::Pointer & img)
-	{
-		typedef itk::ImageFileReader<ImageType>	   NiftiReaderType;
-		typedef itk::OrientImageFilter<ImageType, ImageType> ReOrientorType;
-		auto reader = NiftiReaderType::New();
-		reader->SetFileName(name);
-		reader->Update();
-		auto reOrientor = ReOrientorType::New();
-		reOrientor->UseImageDirectionOn();
-		reOrientor->SetDesiredCoordinateOrientation(itk::SpatialOrientation::ITK_COORDINATE_ORIENTATION_RAI);
-		reOrientor->SetInput(reader->GetOutput());
-		reOrientor->Update();
-		img = reOrientor->GetOutput();
-	};
+	// Registration and surface re-construction
+	std::string moving_name = "./temp/user_temp.nii";
+	std::string fix_name = "";//"./configFile/Atlas/reference_brain_res.nii";
+	std::string warp_prefix = "./temp/transform";
+	std::string warp_name = "./temp/data_reg.nii";
+	std::string affine_txt = "./temp/transformAffine.txt";
 
-	auto fix_image = ImageType::New();
-	auto moving_image = ImageType::New();
-	read_nifti(fixed_name,fix_image);
-	read_nifti(moving_name, moving_image);
-	
-	auto output_image = ImageType::New();
+	const std::string ANTs_exe = "ANTs.exe";
+	const std::string WarpImage_exe = "WarpImageMultiTransform.exe";
+	std::string cmd1 = ANTs_exe + " 3 -m MI[\"";
+	cmd1.append(fix_name); cmd1.append("\",\""); cmd1.append(moving_name); cmd1.append("\",1,32] -i 0 -o \""); cmd1.append(warp_prefix); cmd1.append("\" --rigid-affine false \n");
+	std::string cmd2 = WarpImage_exe + " 3 ";
+	cmd2.append(moving_name); cmd2.append(" "); cmd2.append(warp_name); cmd2.append(" "); cmd2.append(affine_txt); cmd2.append(" -R "); cmd2.append(fix_name);
 
-	typedef Register< PixelType, PixelType, PixelType > RegisterType_process;
-	RegisterType_process * reg_hd = new RegisterType_process;
-	reg_hd->SetFixedImage(fix_image);
-	reg_hd->SetMovingImage(moving_image);
-	reg_hd->GenerateTranformMatrix();
-	reg_hd->GetRegisteredMovingImage(output_image);
-	delete reg_hd;
+	std::cout << "=======================Runing command1 ====================\n" << cmd1 << std::endl;
+	system(cmd1.c_str());
+	std::cout << "=======================Command 1 Done =====================\n\n\n\n" << std::endl;
 
-	// write to image
-	typedef itk::ImageFileWriter<ImageType> NiftiWriterType;;
-	auto niftiWriter = NiftiWriterType::New();
-	niftiWriter->SetFileName(out_name);
-	niftiWriter->SetInput(output_image);
-	try
-	{
-		std::cout << "Writing to file" << std::endl;
-		niftiWriter->Update();
-	}
-	catch (itk::ExceptionObject& e)
-	{
-		std::cout << "Writing to file process error!" << std::endl;
-		std::cout << e;
-	}
+	std::cout << "=======================Runing command2 ====================\n" << cmd2 << std::endl;
+	system(cmd2.c_str());
+	std::cout << "=======================Command 2 Done =====================\n\n\n\n" << std::endl;
+
+
+#pragma endregion
 
 	return 0;
 }

@@ -11,9 +11,12 @@ include(${VTK_USE_FILE})
   
  set(
  SRCS
+ main.cpp
  itkConnectArea.cxx
  itk2vtkReadDicom.cxx
  itkRegistrationTest.cxx
+ itkTransformTest.cxx
+ itkvtkCoordinate.cxx
  )
  
  set(
