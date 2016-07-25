@@ -27,9 +27,9 @@ Input:
 Ouput:
 	An VTK vtkImageData
 */
-vtkSmartPointer<vtkImageData> itk2vtkCoordinate(itk::Image< unsigned, 3 >::Pointer input_img)
+vtkSmartPointer<vtkImageData> itk2vtkCoordinate(itk::Image< int, 3 >::Pointer input_img)
 {
-	typedef itk::Image< unsigned, 3 > ImageType;
+	typedef itk::Image< unsigned int, 3 > ImageType;
 
 	// create image
 	auto itkImg = input_img;
@@ -45,10 +45,17 @@ vtkSmartPointer<vtkImageData> itk2vtkCoordinate(itk::Image< unsigned, 3 >::Point
 	vtkImg->SetDimensions(size[0], size[1], size[2]);
 	vtkImg->SetSpacing(spacing[0], spacing[1], spacing[2]);
 	vtkImg->SetOrigin(origin[0], origin[1], origin[2]);
-	vtkImg->AllocateScalars(VTK_UNSIGNED_INT, 1);
-	
+	vtkImg->AllocateScalars(VTK_INT, 1);
+	//vtkImg->AllocateScalars(VTK_UNSIGNED_CHAR, 1);
+
 	auto scalar = vtkImg->GetScalarPointer();
-	std::memcpy(scalar, itkImg->GetBufferPointer(), sizeof(unsigned)*size[0] * size[1] * size[2]);
+	long sz = sizeof( int)*size[0] * size[1] * size[2];
+	std::memcpy(scalar, itkImg->GetBufferPointer(), sz);
+
+	//auto writer = vtkSmartPointer<vtkNIFTIImageWriter>::New();
+	//writer->SetFileName("E:/test/vtktt.nii");
+	//writer->SetInputData(vtkImg);
+	//writer->Write();
 
 	return vtkImg;
 }

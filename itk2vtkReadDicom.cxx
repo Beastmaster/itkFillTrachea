@@ -19,11 +19,11 @@ Description:
 Input: dicom file dir
 output: itk::Image<unsigned,3>
 */
-itk::Image< unsigned, 3 >::Pointer itk2vtkReadDicom(const char*  dirname)
+itk::Image<  int, 3 >::Pointer itk2vtkReadDicom(const char*  dirname)
 {
 
-	typedef unsigned    PixelType;
-	const unsigned int      Dimension = 3;
+	typedef  int    PixelType;
+	const  int      Dimension = 3;
 	typedef itk::Image< PixelType, Dimension >         ImageType;
 	typedef itk::ImageSeriesReader< ImageType >        ReaderType;
 	
@@ -66,17 +66,19 @@ itk::Image< unsigned, 3 >::Pointer itk2vtkReadDicom(const char*  dirname)
 		reOrientor->SetInput(reader->GetOutput());
 		reOrientor->Update();
 		
-		return reOrientor->GetOutput();
+
 	
 		//typedef itk::ImageFileWriter< ImageType > WriterType;
 		//WriterType::Pointer writer = WriterType::New();
 		//std::string outFileName;
-		//outFileName = "E:/test/head_test.nii";
+		//outFileName = "E:/test/itkread.nii";
 		//writer->SetFileName(outFileName);
 		//writer->UseCompressionOn();
 		//writer->SetInput(reOrientor->GetOutput());
 		//std::cout << "Writing: " << outFileName << std::endl;
 		//writer->Update();
+
+		return reOrientor->GetOutput();
 	}
 
 }

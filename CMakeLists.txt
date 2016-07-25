@@ -17,6 +17,7 @@ include(${VTK_USE_FILE})
  itkRegistrationTest.cxx
  itkTransformTest.cxx
  itkvtkCoordinate.cxx
+ vtkMarchingConnected.cpp
  )
  
  set(

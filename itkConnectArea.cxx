@@ -40,16 +40,21 @@ Description:
 
 /*
 Input:
-	ori_name: Orignal image file name.
-	brain	: The extracted brain of original image
-	filled	: Hole filling result. A thresholded image
+	ori_name : Orignal image file name.
+	brain	 : The extracted brain of original image
+	filled	 : Hole filling result. A thresholded image
+	threshold: int type threshold, lower end.
 */
-int fillHoleFilter(std::string ori_name,std::string brain, std::string filled)
+int fillHoleFilter(std::string ori_name,std::string brain, std::string filled,int threshold)
 {
+	int lowerThreshold = threshold;// 10;
+	int upperThreshold = 10000;
+
+
 	const unsigned int Dimension = 3;
-	typedef unsigned							PixelType;
-	typedef itk::Image<unsigned, Dimension>		ImageType;
-	typedef itk::Image<unsigned, Dimension-1>	Image2DType;
+	typedef  int							PixelType;
+	typedef itk::Image< int, Dimension>		ImageType;
+	typedef itk::Image< int, Dimension-1>	Image2DType;
 	
 	std::string nifti_name = ori_name;//"E:/test/reference_brain_res.nii";
 	
@@ -80,8 +85,6 @@ int fillHoleFilter(std::string ori_name,std::string brain, std::string filled)
 
 
 	// 3. Threshold to binary image
-	unsigned char lowerThreshold = 10;
-	unsigned char upperThreshold = 255;
 	typedef itk::BinaryThresholdImageFilter <ImageType, ImageType>
 		BinaryThresholdImageFilterType;
 
@@ -232,8 +235,8 @@ int fillHoleFilter(std::string ori_name,std::string brain, std::string filled)
 	reOrientor2->SetDesiredCoordinateOrientation(itk::SpatialOrientation::ITK_COORDINATE_ORIENTATION_RAI);
 	reOrientor2->SetInput(brain_reader->GetOutput());
 	reOrientor2->Update();
-	lowerThreshold = 1;
-	upperThreshold = 255;
+	lowerThreshold = 1;   // brain value are small
+	upperThreshold = 255; // brain value are small
 	typedef itk::BinaryThresholdImageFilter <ImageType, ImageType>
 		BinaryThresholdImageFilterType;
 	auto thresholdbrainFilter = BinaryThresholdImageFilterType::New();
@@ -291,6 +294,7 @@ int fillHoleFilter(std::string ori_name,std::string brain, std::string filled)
 	// save
 	auto writer = itk::ImageFileWriter<ImageType>::New();
 	writer->SetFileName(filled);
+	writer->SetInput(orFilter->GetOutput());
 	try
 	{
 		std::cout << "Writing to file" << std::endl;
