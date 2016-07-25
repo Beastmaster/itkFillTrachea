@@ -6,6 +6,7 @@ Description:
 	2. Re-orient it to RAI direction (no sepcification, just the same)
 	3. Select the bottom slice. Make the bottom slice black
 	3. Select the bottom 2nd slice and fill holes
+	4. Use the brain to elminate some holes
 	The process is rather fast because we just process 1 slice
 */
 
@@ -34,15 +35,23 @@ Description:
 #include "itkOrImageFilter.h"
 #include "itkChangeInformationImageFilter.h"
 
-int main1(int argc, char** argv)
+
+
+
+/*
+Input:
+	ori_name: Orignal image file name.
+	brain	: The extracted brain of original image
+	filled	: Hole filling result. A thresholded image
+*/
+int fillHoleFilter(std::string ori_name,std::string brain, std::string filled)
 {
 	const unsigned int Dimension = 3;
-	typedef unsigned char							PixelType;
-	typedef itk::Image<unsigned char, Dimension>	ImageType;
-	typedef itk::Image<unsigned char, Dimension-1>	Image2DType;
+	typedef unsigned							PixelType;
+	typedef itk::Image<unsigned, Dimension>		ImageType;
+	typedef itk::Image<unsigned, Dimension-1>	Image2DType;
 	
-	std::string dir = "";
-	std::string nifti_name = "E:/test/reference_brain_res.nii";
+	std::string nifti_name = ori_name;//"E:/test/reference_brain_res.nii";
 	
 	// 1. read images
 	// parse file name suffix and select reader
@@ -50,49 +59,6 @@ int main1(int argc, char** argv)
 	auto niftiReader = NiftiReaderType::New();
 	niftiReader->SetFileName(nifti_name);
 	niftiReader->Update();
-	/*
-	// ===============================
-	unsigned char lowerThresholdx = 10;
-	unsigned char upperThresholdx = 255;
-	typedef itk::BinaryThresholdImageFilter <ImageType, ImageType>
-		BinaryThresholdImageFilterTypex;
-
-	BinaryThresholdImageFilterTypex::Pointer thresholdFilterx
-		= BinaryThresholdImageFilterTypex::New();
-	thresholdFilterx->SetInput(niftiReader->GetOutput());
-	thresholdFilterx->SetLowerThreshold(lowerThresholdx);
-	thresholdFilterx->SetUpperThreshold(upperThresholdx);
-	thresholdFilterx->SetInsideValue(255);
-	thresholdFilterx->SetOutsideValue(0);
-	try
-	{
-		std::cout << "Thresholding..." << std::endl;
-		thresholdFilterx->Update();
-	}
-	catch (itk::ExceptionObject& e)
-	{
-		std::cout << "Thresholding process error!" << std::endl;
-		std::cout << e;
-		return 1;
-	}
-	// write to image
-	typedef itk::ImageFileWriter<ImageType> NiftiWriterTypex;
-	auto niftiWriterx = NiftiWriterTypex::New();
-	niftiWriterx->SetFileName("E:/test/reference_brain_output.nii");
-	niftiWriterx->SetInput(thresholdFilterx->GetOutput());
-	try
-	{
-		std::cout << "Writing to file" << std::endl;
-		niftiWriterx->Update();
-	}
-	catch (itk::ExceptionObject& e)
-	{
-		std::cout << "Writing to file process error!" << std::endl;
-		std::cout << e;
-	}
-	exit(0);
-	//==================================
-	*/
 
 	// 2. re-orient images
 	typedef itk::OrientImageFilter<ImageType, ImageType> ReOrientorType;
@@ -110,8 +76,34 @@ int main1(int argc, char** argv)
 		std::cout << e;
 		return 1;
 	}
-
 	auto Image = reOrientor->GetOutput();
+
+
+	// 3. Threshold to binary image
+	unsigned char lowerThreshold = 10;
+	unsigned char upperThreshold = 255;
+	typedef itk::BinaryThresholdImageFilter <ImageType, ImageType>
+		BinaryThresholdImageFilterType;
+
+	auto thresholdFilter = BinaryThresholdImageFilterType::New();
+	thresholdFilter->SetInput(Image);
+	thresholdFilter->SetLowerThreshold(lowerThreshold);
+	thresholdFilter->SetUpperThreshold(upperThreshold);
+	thresholdFilter->SetInsideValue(255);
+	thresholdFilter->SetOutsideValue(0);
+	try
+	{
+		std::cout << "Thresholding..." << std::endl;
+		thresholdFilter->Update();
+	}
+	catch (itk::ExceptionObject& e)
+	{
+		std::cout << "Thresholding process error!" << std::endl;
+		std::cout << e;
+		return 1;
+	}
+	Image = thresholdFilter->GetOutput();
+
 
 	// Get Image Size
 	ImageType::RegionType image_region = Image->GetLargestPossibleRegion();
@@ -129,7 +121,7 @@ int main1(int argc, char** argv)
 	size[2] = 2;//image_size[2];
 	index[0] = image_index[0];
 	index[1] = image_index[1];
-	index[2] = image_index[2]+1;
+	index[2] = image_index[2]+1;  //??
 	RegionType region(index, size);
 
 	// create a 2d slice
@@ -186,75 +178,13 @@ int main1(int argc, char** argv)
 			}
 		}
 	}
-	//typedef itk::ExtractImageFilter< ImageType, Image2DType > ExtractFilterType;
-	//auto extractFilter = ExtractFilterType::New();
-	//extractFilter->SetExtractionRegion(region);
-	//extractFilter->SetInput(Image);
-	//extractFilter->SetDirectionCollapseToIdentity();
-	//try
-	//{
-	//	extractFilter->Update();
-	//}
-	//catch (itk::ExceptionObject& e)
-	//{
-	//	std::cout << "Extract process error!" << std::endl;
-	//	std::cout << e;
-	//	return 1;
-	//}
 
 
-	// 3. Threshold to binary image
-	unsigned char lowerThreshold = 10;
-	unsigned char upperThreshold = 255;
-	typedef itk::BinaryThresholdImageFilter <Image2DType, Image2DType>
-		BinaryThresholdImageFilter2DType;
 
-	auto thresholdFilter = BinaryThresholdImageFilter2DType::New();
-	thresholdFilter->SetInput(ImageSlice);
-	//thresholdFilter->SetInput(niftiReader->GetOutput());
-	thresholdFilter->SetLowerThreshold(lowerThreshold);
-	thresholdFilter->SetUpperThreshold(upperThreshold);
-	thresholdFilter->SetInsideValue(255);
-	thresholdFilter->SetOutsideValue(0);
-	try
-	{
-		std::cout << "Thresholding..." << std::endl;
-		thresholdFilter->Update();
-	}
-	catch (itk::ExceptionObject& e)
-	{
-		std::cout << "Thresholding process error!" << std::endl;
-		std::cout << e;
-		return 1;
-	}
-
-
-	//// 4.1 Run fill hold algorithm
-	//typedef itk::VotingBinaryHoleFillingImageFilter< Image2DType, Image2DType > FillingHoleFilter;
-	//FillingHoleFilter::Pointer fillingHoleFilter = FillingHoleFilter::New();
-	//ImageType::SizeType indexRadius;
-	//indexRadius[0] = 100; // along x
-	//indexRadius[1] = 100; // along Y
-	////indexRadius[2] = 2; // along Z
-	//fillingHoleFilter->SetInput(thresholdFilter->GetOutput());
-	//fillingHoleFilter->SetBackgroundValue(0);
-	//fillingHoleFilter->SetForegroundValue(255);
-	//try
-	//{
-	//	std::cout << "Voting binary hole filling ..." << std::endl;
-	//	fillingHoleFilter->Update();
-	//}
-	//catch (itk::ExceptionObject& e)
-	//{
-	//	std::cout << "Filling Holes process error!" << std::endl;
-	//	std::cout << e;
-	//	return 1;
-	//}
-
-	// 4.3 Run Connected algorithm ==   test
+	// 4.3 Run Connected algorithm
 	typedef itk::BinaryFillholeImageFilter< Image2DType > FillHoleType;
 	auto fillHoleFilter = FillHoleType::New();
-	fillHoleFilter->SetInput(thresholdFilter->GetOutput());
+	fillHoleFilter->SetInput(ImageSlice);
 	//fillHoleFilter->SetInput(thresholdFilter->GetOutput());
 	fillHoleFilter->SetFullyConnected(1);
 	fillHoleFilter->SetForegroundValue(itk::NumericTraits < PixelType > ::max());
@@ -296,7 +226,7 @@ int main1(int argc, char** argv)
 	//=== Read brain, run image dilate and  OR
 	std::cout << "Running Dilation ...."<<std::endl;
 	auto brain_reader = NiftiReaderType::New();
-	brain_reader->SetFileName("E:/test/reference_brain_aal.nii");
+	brain_reader->SetFileName(brain);// ("E:/test/reference_brain_aal.nii");
 	auto reOrientor2 = ReOrientorType::New();
 	reOrientor2->UseImageDirectionOn();
 	reOrientor2->SetDesiredCoordinateOrientation(itk::SpatialOrientation::ITK_COORDINATE_ORIENTATION_RAI);
@@ -308,7 +238,6 @@ int main1(int argc, char** argv)
 		BinaryThresholdImageFilterType;
 	auto thresholdbrainFilter = BinaryThresholdImageFilterType::New();
 	thresholdbrainFilter->SetInput(reOrientor2->GetOutput());
-	//thresholdFilter->SetInput(niftiReader->GetOutput());
 	thresholdbrainFilter->SetLowerThreshold(lowerThreshold);
 	thresholdbrainFilter->SetUpperThreshold(upperThreshold);
 	thresholdbrainFilter->SetInsideValue(255);
@@ -343,19 +272,6 @@ int main1(int argc, char** argv)
 	thresholdheadFilter->SetInsideValue(255);
 	thresholdheadFilter->SetOutsideValue(0);
 	thresholdheadFilter->Update();
-
-	//typedef itk::ChangeInformationImageFilter< ImageType > InfoFilterType;
-	//auto infoFilter = InfoFilterType::New();
-	//infoFilter->SetInput(thresholdbrainFilter->GetOutput());
-	//const ImageType::DirectionType direction = thresholdheadFilter->GetOutput()->GetDirection();
-	//const ImageType::SpacingType   spacing = thresholdheadFilter->GetOutput()->GetSpacing();
-	//infoFilter->SetOutputDirection(direction);
-	//infoFilter->SetOutputSpacing(spacing);
-	//infoFilter->ChangeDirectionOn();
-	//infoFilter->ChangeSpacingOn();
-	//infoFilter->UpdateOutputInformation();
-	//infoFilter->Update();
-
 	typedef itk::OrImageFilter <ImageType,ImageType,ImageType> OrImageFilterType;
 	OrImageFilterType::Pointer orFilter = OrImageFilterType::New();
 	orFilter->SetInput1(thresholdheadFilter->GetOutput());
@@ -363,8 +279,22 @@ int main1(int argc, char** argv)
 	orFilter->SetCoordinateTolerance(0.01);
 	try
 	{
-		std::cout << "Writing to file" << std::endl;
+		std::cout << "Running OR operation" << std::endl;
 		orFilter->Update();
+	}
+	catch (itk::ExceptionObject& e)
+	{
+		std::cout << "Running OR operation process error!" << std::endl;
+		std::cout << e;
+	}
+
+	// save
+	auto writer = itk::ImageFileWriter<ImageType>::New();
+	writer->SetFileName(filled);
+	try
+	{
+		std::cout << "Writing to file" << std::endl;
+		writer->Update();
 	}
 	catch (itk::ExceptionObject& e)
 	{
@@ -372,22 +302,6 @@ int main1(int argc, char** argv)
 		std::cout << e;
 	}
 
-	// write to image
-	typedef itk::ImageFileWriter<ImageType> NiftiWriterType;;
-	auto niftiWriter = NiftiWriterType::New();
-	niftiWriter->SetFileName("E:/test/reference_brain_aaldilate.nii");
-	//niftiWriter->SetInput(Image);
-	niftiWriter->SetInput(orFilter->GetOutput());
-	try
-	{
-		std::cout << "Writing to file" << std::endl;
-		niftiWriter->Update();
-	}
-	catch (itk::ExceptionObject& e)
-	{
-		std::cout << "Writing to file process error!" << std::endl;
-		std::cout << e;
-	}
 
 	return 0;
 }

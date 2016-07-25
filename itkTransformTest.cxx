@@ -11,6 +11,7 @@ Description:
 #include <string>
 #include <functional>
 #include <stdio.h>
+#include <stdlib.h>
 #include <iostream>
 #include <vector>
 #include <fstream>
@@ -46,8 +47,14 @@ Description:
 
 
 
-
-int itkTransform(std::vector<double*> list)
+/*
+Input:
+	list	: A list of 3d point tobe transformed. The coordinate are ITK system
+	filename: The file generated from itkRegistrationTest function.
+Note:
+	the list is reference, the value will be modified without return.
+*/
+int itkTransform(std::vector<double*>& list , std::string filename)
 {
 	
 	auto read_transform = []( std::string filename)
@@ -97,11 +104,9 @@ int itkTransform(std::vector<double*> list)
 		return transform;
 	};
 	
-	auto tt = read_transform("E:/WorkPlace/Cpp/vtk_solutions/TMS/build/Release/temp/transformAffine.txt");
+	auto tt = read_transform(filename);//("E:/WorkPlace/Cpp/vtk_solutions/TMS/build/Release/temp/transformAffine.txt");
 
 	tt->Print(std::cout);
-	tt->GetTransformTypeAsString();
-
 	
 	typedef itk::AffineTransform <double, 3> TransformType;
 
@@ -110,8 +115,17 @@ int itkTransform(std::vector<double*> list)
 	CompositeTransformType::Pointer composite = CompositeTransformType::New();
 
 	auto transform = TransformType::New();
-	//transform->SetTranslation();
+	transform->SetParameters(tt->GetParameters());
+	transform->SetFixedParameters(tt->GetFixedParameters());
 
+	for (auto it = list.begin(); it != list.end(); ++it)
+	{
+		auto point = transform->TransformPoint(*it);
+		//memcpy((*it),static_cast<void*>(point),3*sizeof(double));
+		(*it)[0] = point[0];
+		(*it)[1] = point[1];
+		(*it)[2] = point[2];
+	}
 	return 0;
 }
 

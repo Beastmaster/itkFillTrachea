@@ -4,7 +4,7 @@ Date: 2016/7/14
 Description:
 	Transform itk coordinate to vtk coordinate
 Solution:
-	
+	copy
 */
 
 #include "itkImageFileReader.h"
@@ -22,8 +22,10 @@ Solution:
 
 
 /*
-
-
+Input:
+	input_img: An ITK image pointer
+Ouput:
+	An VTK vtkImageData
 */
 vtkSmartPointer<vtkImageData> itk2vtkCoordinate(itk::Image< unsigned, 3 >::Pointer input_img)
 {
