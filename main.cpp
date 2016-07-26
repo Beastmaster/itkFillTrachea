@@ -13,6 +13,8 @@ Description:
 
 
 #include "itkImage.h"
+#include "itkImageFileWriter.h"
+#include "itkImageFileReader.h"
 #include "vtkSmartPointer.h"
 #include "vtkImageData.h"
 #include "vtkNIFTIImageWriter.h"
@@ -25,6 +27,9 @@ Description:
 #include <vtkRenderer.h>
 #include <vtkRenderWindow.h>
 #include <vtkRenderWindowInteractor.h>
+
+// stl test
+#include "vtkSTLWriter.h"
 
 itk::Image< int, 3 >::Pointer itk2vtkReadDicom(const char* dirname);
 vtkSmartPointer<vtkImageData> itk2vtkCoordinate(itk::Image<  int, 3 >::Pointer input_img);
@@ -46,9 +51,14 @@ int main(int argc, char** argv)
 	// convert to vtkimagedata
 	auto vtk_img1 = itk2vtkCoordinate(itk_img1);
 	// write to nifti file
-	auto writer = vtkSmartPointer<vtkNIFTIImageWriter>::New();
-	writer->SetFileName(niftiname.c_str());
-	writer->SetInputData(vtk_img1);
+	typedef itk::ImageFileWriter< itk::Image<int,3> > WriterType;
+	WriterType::Pointer writer = WriterType::New();
+	std::string outFileName;
+	outFileName = "E:/test/head.nii";
+	writer->SetFileName(outFileName);
+	writer->UseCompressionOn();
+	writer->SetInput(itk_img1);
+	std::cout << "Writing: " << outFileName << std::endl;
 	writer->Update();
 
 	// registration
@@ -58,7 +68,7 @@ int main(int argc, char** argv)
 	std::string moving_brain = "E:/test/reference_brain_aal.nii";
 	std::string warp_brain = "E:/test/moved_reference_brain.nii";
 	std::string preffix = "E:/test/moved_transform";
-	//itkRegistrationTest( moving, fix, warp, preffix,moving_brain,warp_brain);
+	itkRegistrationTest( moving, fix, warp, preffix,moving_brain,warp_brain);
 
 	//transform points
 	std::vector<double*> list;
@@ -66,7 +76,7 @@ int main(int argc, char** argv)
 	double p2[] = { 0.1, 0.2, 0.3 };
 	double p3[] = { 0.1, 0.2, 0.3 };
 	list.push_back(p1); list.push_back(p2); list.push_back(p3);
-//	itkTransform(list, preffix+"Affine.txt");
+	itkTransform(list, preffix+"Affine.txt");
 
 	// fill hole
 	std::string filled_name = "E:/test/filled_skin.nii";  // use this file to extract skin surface
@@ -79,6 +89,11 @@ int main(int argc, char** argv)
 
 	auto suf = Marching_Connected(reader->GetOutput(), 50);
 
+	//stl
+	auto stl_writer = vtkSmartPointer<vtkSTLWriter>::New();
+	stl_writer->SetInputData(suf);
+	stl_writer->SetFileName("E:/test/head.stl");
+	stl_writer->Update();
 
 
 	//skin actor
