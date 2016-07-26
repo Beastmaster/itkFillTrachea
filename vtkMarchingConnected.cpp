@@ -6,6 +6,7 @@ Description:
 
 */
 
+#include <functional>
 
 #include "vtkSmartPointer.h"
 #include "vtkMarchingCubes.h"
@@ -13,11 +14,12 @@ Description:
 #include "vtkImageData.h"
 #include "vtkGeometryFilter.h"
 #include "vtkSmoothPolyDataFilter.h"
-
+#include "vtkImageCast.h"
+#include "vtkImageGaussianSmooth.h"
 
 /*
 Input:
-	input: input vtkimagedata
+	input: input vtkimagedata, typically a thresholded image (fillHole)
 	strip_value: strip value
 Output:
 	striped polydata, a surface
@@ -25,11 +27,31 @@ Output:
 vtkSmartPointer<vtkPolyData> Marching_Connected(vtkImageData* input , double strip_value)
 {
 
+	auto pre_process = [input]()
+	{
+		auto caster = vtkSmartPointer<vtkImageCast>::New();
+		caster->SetInputData(input);
+		caster->SetOutputScalarTypeToFloat();
+		caster->Update();
+
+		//====  smooth   ====//
+		vtkSmartPointer<vtkImageGaussianSmooth> gaussianSmoothFilter =
+			vtkSmartPointer<vtkImageGaussianSmooth>::New();
+		gaussianSmoothFilter->SetInputData(caster->GetOutput());
+		gaussianSmoothFilter->Update();
+
+		auto new_img = vtkSmartPointer<vtkImageData>::New();
+		new_img = gaussianSmoothFilter->GetOutput();
+
+		return new_img;
+	};
+	auto temp = pre_process();
+
 	auto marchingCubes = vtkSmartPointer<vtkMarchingCubes>::New();
 #if VTK_MAJOR_VERSION <= 5
-	marchingCubes->SetInput(input);
+	marchingCubes->SetInput(temp);
 #else
-	marchingCubes->SetInputData(input);
+	marchingCubes->SetInputData(temp);
 #endif
 	//marchingCubes->SetNumberOfContours(2);
 	marchingCubes->SetValue(0, strip_value);
@@ -61,10 +83,10 @@ vtkSmartPointer<vtkPolyData> Marching_Connected(vtkImageData* input , double str
 	smoothfilter->SetConvergence(10);
 	smoothfilter->BoundarySmoothingOn();
 	smoothfilter->FeatureEdgeSmoothingOn();
-	smoothfilter->Update();
+	//smoothfilter->Update();
 
 	
-	buff = smoothfilter->GetOutput();
+	//buff = smoothfilter->GetOutput();
 
 	return buff;
 }

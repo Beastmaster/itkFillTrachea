@@ -70,14 +70,14 @@ int main(int argc, char** argv)
 
 	// fill hole
 	std::string filled_name = "E:/test/filled_skin.nii";  // use this file to extract skin surface
-//	fillHoleFilter(fix, warp_brain, filled_name,50);
+	fillHoleFilter(fix, warp_brain, filled_name,50);
 
 	//run marchingcubes
 	auto reader = vtkSmartPointer<vtkNIFTIImageReader>::New();
 	reader->SetFileName(filled_name.c_str());
 	reader->Update();
 
-	auto suf = Marching_Connected(reader->GetOutput(), 10);
+	auto suf = Marching_Connected(reader->GetOutput(), 50);
 
 
 
