@@ -58,16 +58,17 @@ itk::Image<  int, 3 >::Pointer itk2vtkReadDicom(const char*  dirname)
 		ImageIOType::Pointer dicomIO = ImageIOType::New();
 		reader->SetImageIO(dicomIO);
 		reader->SetFileNames(fileNames);
+		reader->Update();
 		return reader->GetOutput();
 
-		 //Re-orient image
-		typedef itk::OrientImageFilter<ImageType, ImageType> ReOrientorType;
-		auto reOrientor = ReOrientorType::New();
-		reOrientor->UseImageDirectionOn();
-		reOrientor->SetDesiredCoordinateOrientation(itk::SpatialOrientation::ITK_COORDINATE_ORIENTATION_RAI);
-		reOrientor->SetInput(reader->GetOutput());
-		//reOrientor->Update();
-		return reOrientor->GetOutput();
+		// //Re-orient image
+		//typedef itk::OrientImageFilter<ImageType, ImageType> ReOrientorType;
+		//auto reOrientor = ReOrientorType::New();
+		//reOrientor->UseImageDirectionOn();
+		//reOrientor->SetDesiredCoordinateOrientation(itk::SpatialOrientation::ITK_COORDINATE_ORIENTATION_RAI);
+		//reOrientor->SetInput(reader->GetOutput());
+		////reOrientor->Update();
+		//return reOrientor->GetOutput();
 
 	
 		//typedef itk::ImageFileWriter< ImageType > WriterType;

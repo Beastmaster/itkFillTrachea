@@ -18,6 +18,8 @@ include(${VTK_USE_FILE})
  itkTransformTest.cxx
  itkvtkCoordinate.cxx
  vtkMarchingConnected.cpp
+ colorSurface.cxx
+ search_corresponding_coordinate.cxx
  )
  
  set(

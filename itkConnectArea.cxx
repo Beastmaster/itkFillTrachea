@@ -73,7 +73,7 @@ int fillHoleFilter(std::string ori_name,std::string brain, std::string filled,in
 	reOrientor->SetInput(niftiReader->GetOutput());
 	try
 	{
-		reOrientor->Update();
+		//reOrientor->Update();
 	}
 	catch ( itk::ExceptionObject& e)
 	{
@@ -81,7 +81,7 @@ int fillHoleFilter(std::string ori_name,std::string brain, std::string filled,in
 		std::cout << e;
 		return 1;
 	}
-	auto Image = reOrientor->GetOutput();
+	auto Image = niftiReader->GetOutput();
 
 
 	// 3. Threshold to binary image
@@ -230,17 +230,18 @@ int fillHoleFilter(std::string ori_name,std::string brain, std::string filled,in
 	std::cout << "Running Dilation ...."<<std::endl;
 	auto brain_reader = NiftiReaderType::New();
 	brain_reader->SetFileName(brain);// ("E:/test/reference_brain_aal.nii");
+	brain_reader->Update();
 	auto reOrientor2 = ReOrientorType::New();
 	reOrientor2->UseImageDirectionOn();
 	reOrientor2->SetDesiredCoordinateOrientation(itk::SpatialOrientation::ITK_COORDINATE_ORIENTATION_RAI);
 	reOrientor2->SetInput(brain_reader->GetOutput());
-	reOrientor2->Update();
+	//reOrientor2->Update();
 	lowerThreshold = 1;   // brain value are small
 	upperThreshold = 255; // brain value are small
 	typedef itk::BinaryThresholdImageFilter <ImageType, ImageType>
 		BinaryThresholdImageFilterType;
 	auto thresholdbrainFilter = BinaryThresholdImageFilterType::New();
-	thresholdbrainFilter->SetInput(reOrientor2->GetOutput());
+	thresholdbrainFilter->SetInput(brain_reader->GetOutput());
 	thresholdbrainFilter->SetLowerThreshold(lowerThreshold);
 	thresholdbrainFilter->SetUpperThreshold(upperThreshold);
 	thresholdbrainFilter->SetInsideValue(255);
