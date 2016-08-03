@@ -60,26 +60,6 @@ itk::Image<  int, 3 >::Pointer itk2vtkReadDicom(const char*  dirname)
 		reader->SetFileNames(fileNames);
 		reader->Update();
 		return reader->GetOutput();
-
-		// //Re-orient image
-		//typedef itk::OrientImageFilter<ImageType, ImageType> ReOrientorType;
-		//auto reOrientor = ReOrientorType::New();
-		//reOrientor->UseImageDirectionOn();
-		//reOrientor->SetDesiredCoordinateOrientation(itk::SpatialOrientation::ITK_COORDINATE_ORIENTATION_RAI);
-		//reOrientor->SetInput(reader->GetOutput());
-		////reOrientor->Update();
-		//return reOrientor->GetOutput();
-
-	
-		//typedef itk::ImageFileWriter< ImageType > WriterType;
-		//WriterType::Pointer writer = WriterType::New();
-		//std::string outFileName;
-		//outFileName = "E:/test/itkread.nii";
-		//writer->SetFileName(outFileName);
-		//writer->UseCompressionOn();
-		//writer->SetInput(reOrientor->GetOutput());
-		//std::cout << "Writing: " << outFileName << std::endl;
-		//writer->Update();
 	}
 
 }

@@ -39,7 +39,9 @@ int itkRegistrationTest(std::string moving, std::string fix, std::string warp, s
 int itkTransform(std::vector<double*>& list, std::string filename);
 int fillHoleFilter(std::string ori_name, std::string brain, std::string surface,int threshold);
 vtkSmartPointer<vtkPolyData> Marching_Connected(vtkImageData* input, double strip_value);
-
+int FindVTKCoordinateInITK(std::string filename, double* in, double* out);
+int FindITKCoordinateInVTK(std::string filename, double* in, double* out);
+int itkTransformImage(std::string transform_file, std::string in_filename, std::string out_filename);
 
 
 int main(int argc, char** argv)
@@ -73,43 +75,84 @@ int main(int argc, char** argv)
 	//transform points
 	std::vector<double*> list;
 	double pp[][3] = 
-	{ 	{ 143.688, 176.57, 15.186 },
-		{68.671, 144.655, 45.683},
-		{36.993, 171.798, 96.256},
-		{146.645, 175.545, 173.321},
-		{70.282, 143.187, 148.363 } };
+	{ 	{-72.2834,1.5069,-57.318 },
+		{-48.982,-74.945,-25.526},
+		{5.2913,-109.121,-58.876},
+		{59.924,-76.659,-25.647},
+		{87.947,-0.1983,-60.755} };
 
 	for (size_t i = 0; i < 5; i++)
 	{
+		double * temp = new double(3);
+
+		// transform to itk coordiante
+		//FindVTKCoordinateInITK(moving.c_str(), pp[i], temp);
+
 		list.push_back(pp[i]);
 	}
+
+	double pp2[][3]
+	{
+		{115.154, 209.358, 33.1324 },
+		{ 53.4593, 171.363, 69.5877, },
+		{ 27.4593, 199.137, 122.67 },
+		{ 136.621, 211.747, 195.237 },
+		{ 67.202, 172.043, 174.883 }
+	};
 	std::vector<double*> list2;
 	for (size_t i = 0; i < 5; i++)
 	{
 		double *temp = new double(3);
 		memcpy(temp,list[i],sizeof(double)*3);
 		list2.push_back(temp);
+		//list2.push_back(pp2[i]);
 	}
 
 
-	itkTransform(list, preffix+"Affine.txt");
+	itkTransform(list2, preffix+"Affine.txt");
+
+	std::cout << "List:" << std::endl;
+	for (auto it = list.begin(); it != list.end(); ++it)
+	{
+		for (int i = 0; i < 3; i++)
+			std::cout << (*it)[i] << ",";
+	}
+	std::cout << std::endl << "List2:" << std::endl;
+	for (auto it = list2.begin(); it != list2.end(); ++it)
+	{
+		for (int i = 0; i < 3; i++)
+			std::cout << (*it)[i] << ",";
+	}
 
 	// fill hole
 	std::string filled_name = "E:/test/filled_skin.nii";  // use this file to extract skin surface
 	//fillHoleFilter(fix, warp_brain, filled_name,50);
 
 	//run marchingcubes
-	auto vtkreader = vtkSmartPointer<vtkNIFTIImageReader>::New();
-	vtkreader->SetFileName(fix.c_str());
-	vtkreader->Update();
-	auto vtk_img = vtkreader->GetOutput();
-	auto suf = Marching_Connected(vtk_img, 50);
+	typedef itk::ImageFileReader<itk::Image<int, 3> > ITKReaderType;
+	auto itkreader1 = ITKReaderType::New();
+	itkreader1->SetFileName(moving); itkreader1->Update();
+	auto vtk_img = itk2vtkCoordinate(itkreader1->GetOutput());
+	auto suf = Marching_Connected(vtk_img, 10);
 
-	auto vtkreader2 = vtkSmartPointer<vtkNIFTIImageReader>::New();
-	vtkreader2->SetFileName(moving.c_str());
-	vtkreader2->Update();
-	auto vtk_img2 = vtkreader2->GetOutput();
-	auto suf2 = Marching_Connected(vtk_img2, 10);
+
+	auto itkreader2 = ITKReaderType::New();
+	itkreader2->SetFileName(fix); itkreader2->Update();
+	auto vtk_img2 = itk2vtkCoordinate(itkreader2->GetOutput());
+	auto suf2 = Marching_Connected(vtk_img2, 50);
+
+
+	auto write_stl = [](vtkSmartPointer<vtkPolyData> suf, std::string filename)
+	{
+		std::cout << "Writing to  " << filename << std::endl;
+		auto stl_writer = vtkSmartPointer< vtkSTLWriter>::New();
+		stl_writer->SetInputData(suf);
+		stl_writer->SetFileName(filename.c_str());
+		stl_writer->Update();
+	};
+
+	//write_stl(suf,"E:/test/fix.stl");
+	write_stl(suf2, "E:/test/resampled.stl");
 
 
 	auto create_ball_actors = [](std::vector<double*> list)
@@ -149,6 +192,9 @@ int main(int argc, char** argv)
 	skin_mapper->SetInputData(suf);
 	auto skin_actor = vtkSmartPointer<vtkActor>::New();
 	skin_actor->SetMapper(skin_mapper);
+
+
+
 	//renderer1
 	vtkSmartPointer<vtkRenderer> renderer =
 		vtkSmartPointer<vtkRenderer>::New();
@@ -157,6 +203,8 @@ int main(int argc, char** argv)
 	{
 		renderer->AddActor((*it));
 	}
+	//renderer->AddActor(skin_actorx);
+
 	// skin 2
 	auto skin_mapper2 = vtkSmartPointer<vtkPolyDataMapper>::New();
 	skin_mapper2->SetInputData(suf2);
@@ -170,6 +218,7 @@ int main(int argc, char** argv)
 	{
 		renderer2->AddActor((*it));
 	}
+
 
 	vtkSmartPointer<vtkRenderWindow> renwin =
 		vtkSmartPointer<vtkRenderWindow>::New();

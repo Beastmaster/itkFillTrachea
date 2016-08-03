@@ -4,14 +4,14 @@ Date: 2016/7/14
 Description:
 	Transform itk coordinate to vtk coordinate
 Solution:
-	copy
+	fail to apply right transform
 */
 
 #include "itkImageFileReader.h"
 #include "itkImageFileWriter.h"
 #include "itkImage.h"
 #include "itkPointSet.h"
-
+#include "itkOrientImageFilter.h"
 
 #include "vtkSmartPointer.h"
 #include <vtkImageData.h>
@@ -29,10 +29,19 @@ Ouput:
 */
 vtkSmartPointer<vtkImageData> itk2vtkCoordinate(itk::Image< int, 3 >::Pointer input_img)
 {
-	typedef itk::Image< unsigned int, 3 > ImageType;
+	typedef itk::Image< int, 3 > ImageType;
+
+	 //Re-orient image
+	typedef itk::OrientImageFilter<ImageType, ImageType> ReOrientorType;
+	auto reOrientor = ReOrientorType::New();
+	reOrientor->UseImageDirectionOn();
+	reOrientor->SetDesiredCoordinateOrientation(itk::SpatialOrientation::ITK_COORDINATE_ORIENTATION_RAI);
+	reOrientor->SetInput(input_img);
+	reOrientor->Update();
+	
 
 	// create image
-	auto itkImg = input_img;
+	auto itkImg = reOrientor->GetOutput();
 	unsigned int dimensions = itkImg->GetImageDimension();
 	auto region = itkImg->GetLargestPossibleRegion();
 	auto size = region.GetSize();
