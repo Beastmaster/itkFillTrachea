@@ -199,7 +199,9 @@ vtkSmartPointer<vtkMatrix4x4> readITKTransform(std::string filename)
 	transform->SetParameters(tt->GetParameters());
 	transform->SetFixedParameters(tt->GetFixedParameters());
 	transform->Print(std::cout);
-	//transform->GetInverse()
+	
+	auto n_transform = TransformType::New();
+	n_transform->UpdateTransformParameters(transform->GetInverseTransform()->GetParameters());
 
 	auto matrix = transform->GetInverseMatrix();
 	auto center = transform->GetCenter();
@@ -222,9 +224,9 @@ vtkSmartPointer<vtkMatrix4x4> readITKTransform(std::string filename)
 	output_matrix->SetElement(1, 2, matrix[1][2]);
 	output_matrix->SetElement(2, 2, matrix[2][2]);
 
-	output_matrix->SetElement(0, 3, offset[0]);
-	output_matrix->SetElement(1, 3, offset[1]);
-	output_matrix->SetElement(2, 3, offset[2]);
+	output_matrix->SetElement(0, 3, -offset[0]);
+	output_matrix->SetElement(1, 3, -offset[1]);
+	output_matrix->SetElement(2, 3, -offset[2]);
 
 	return output_matrix;
 }

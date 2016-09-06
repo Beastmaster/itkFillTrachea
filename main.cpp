@@ -85,7 +85,7 @@ int main(int argc, char** argv)
 	auto fix_poly = Marching_Connected(fix_image, 10);
 	std::cout << "Marching 1 done" << std::endl;
 
-	/*	
+	
 	//itkTransformImage(preffix + "Affine.txt", moving, "E:/test/resample_reference.nii");
 	auto vtkreader2 = itk::ImageFileReader<itk::Image<int, 3> >::New();
 	vtkreader2->SetFileName(moving.c_str()); //("E:/test/resample_reference.nii");// 
@@ -137,7 +137,7 @@ int main(int argc, char** argv)
 	mapper3->SetInputData(warp_poly);
 	auto actor3 = vtkSmartPointer<vtkActor>::New();
 	actor3->SetMapper(mapper3);
-	*/
+	
 	auto mapper1 = vtkSmartPointer<vtkPolyDataMapper>::New();
 	mapper1->SetInputData(fix_poly);
 	auto actor1 = vtkSmartPointer<vtkActor>::New();
@@ -154,26 +154,10 @@ int main(int argc, char** argv)
 	interactor->SetRenderWindow(renWin);
 	
 	renderer->AddActor(actor1);
-	
-	for (size_t i = 0; i < 5; i++)
-	{
-		auto sphereSrc = vtkSmartPointer<vtkSphereSource>::New();
-		sphereSrc->SetRadius(5);
-		sphereSrc->Update();
-		auto sphere = sphereSrc->GetOutput();
-		auto spmapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-		spmapper->SetInputData(sphere);
-		auto spActor = vtkSmartPointer<vtkActor>::New();
-		spActor->SetMapper(spmapper);
-		spActor->SetPosition(points[i]);
-		renderer->AddActor(spActor);
-	}
+	renderer->AddActor(actor2);
 
-
-	
-
-	//renderer2->AddActor(actor1);
-	//renderer2->AddActor(actor3);
+	renderer2->AddActor(actor1);
+	renderer2->AddActor(actor3);
 
 	renWin->Render();
 	interactor->Start();
