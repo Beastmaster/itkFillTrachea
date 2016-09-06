@@ -112,23 +112,125 @@ int itkTransform(std::vector<double*>& list , std::string filename)
 	transform->SetIdentity();
 	transform->SetParameters(tt->GetParameters());
 	transform->SetFixedParameters(tt->GetFixedParameters());
-	
-	//composite->AddTransform(transform);
+
+	composite->AddTransform(transform->GetInverseTransform());
+
+	auto matrix = transform->GetMatrix();
+	auto center = transform->GetCenter();
+	auto offset = transform->GetOffset();
+
 	 
 	for (auto it = list.begin(); it != list.end(); ++it)
 	{
 		//auto point = transform->TransformPoint(*it);
-		auto point = transform->BackTransformPoint(*it);
-		//auto point = composite->TransformPoint(*it);
-		auto offset = transform->GetOffset();
+		//auto point = transform->BackTransformPoint(*it);
+		auto point = composite->TransformPoint(*it);
 
-		(*it)[0] = point[0];// - offset[0];
-		(*it)[1] = point[1];// - offset[1];
-		(*it)[2] = point[2];// - offset[2];
+		(*it)[0] = point[0];// + offset[0];
+		(*it)[1] = point[1];// + offset[1];
+		(*it)[2] = point[2];// + offset[2];
 
 	}
 	return 0;
 }
+
+
+
+vtkSmartPointer<vtkMatrix4x4> readITKTransform(std::string filename)
+{
+	auto read_transform = [](std::string filename)
+	{
+		// Register default transforms
+		// itk::TransformFactoryBase::RegisterDefaultTransforms();
+		typedef itk::MatrixOffsetTransformBase< double, 3, 3 > MatrixOffsetTransformType;
+		itk::TransformFactory<MatrixOffsetTransformType>::RegisterTransform();
+
+		itk::TransformFileReaderTemplate<double>::Pointer reader =
+			itk::TransformFileReaderTemplate<double>::New();
+
+		// replace keywords: MatrixOffsetTransformBase -->> AffineTransform
+		auto replace_keywords = [filename]()
+		{
+			std::ifstream t(filename);
+			std::stringstream buffer;
+			buffer << t.rdbuf();
+			auto content = buffer.str();
+
+			std::string substr = "MatrixOffsetTransformBase";
+			std::string newsub = "AffineTransform";
+
+			// replace substr with newsub
+			std::size_t found = content.find(substr);
+			if (found == std::string::npos)
+			{
+				std::cout << "No need to replace" << std::endl;
+				return;
+			}
+			content.replace(content.find(substr), substr.length(), newsub);
+			std::cout << content << '\n';
+
+			std::ofstream ww(filename);
+			ww << content;
+			ww.flush();
+		};
+
+
+		reader->SetFileName(filename.c_str());
+		reader->Update();
+		reader->GetTransformList();
+
+		auto list = reader->GetTransformList();
+		auto transform = *(list->begin());
+		return transform;
+	};
+
+	auto tt = read_transform(filename);
+
+	tt->Print(std::cout);
+
+	//typedef itk::AffineTransform <double, 3> TransformType;
+	typedef itk::MatrixOffsetTransformBase<double, 3> TransformType;
+
+	typedef itk::CompositeTransform< double, 3 > CompositeTransformType;
+	CompositeTransformType::Pointer composite = CompositeTransformType::New();
+
+	auto transform = TransformType::New();
+	transform->SetIdentity();
+	transform->SetParameters(tt->GetParameters());
+	transform->SetFixedParameters(tt->GetFixedParameters());
+	transform->Print(std::cout);
+	//transform->GetInverse()
+
+	auto matrix = transform->GetInverseMatrix();
+	auto center = transform->GetCenter();
+	auto offset = transform->GetOffset();
+	auto translation = transform->GetTranslation();
+
+
+	auto output_matrix = vtkSmartPointer<vtkMatrix4x4>::New();
+	output_matrix->Identity();
+	
+	output_matrix->SetElement(0, 0, matrix[0][0]);
+	output_matrix->SetElement(1, 0, matrix[1][0]);
+	output_matrix->SetElement(2, 0, matrix[2][0]);
+	
+	output_matrix->SetElement(0, 1, matrix[0][1]);
+	output_matrix->SetElement(1, 1, matrix[1][1]);
+	output_matrix->SetElement(2, 1, matrix[2][1]);
+
+	output_matrix->SetElement(0, 2, matrix[0][2]);
+	output_matrix->SetElement(1, 2, matrix[1][2]);
+	output_matrix->SetElement(2, 2, matrix[2][2]);
+
+	output_matrix->SetElement(0, 3, offset[0]);
+	output_matrix->SetElement(1, 3, offset[1]);
+	output_matrix->SetElement(2, 3, offset[2]);
+
+	return output_matrix;
+}
+
+
+
 
 
 int itkTransformImage(std::string transform_file, std::string in_filename, std::string out_filename)
@@ -190,6 +292,7 @@ int itkTransformImage(std::string transform_file, std::string in_filename, std::
 	auto transform = TransformType::New();
 	transform->SetParameters(tt->GetParameters());
 	transform->SetFixedParameters(tt->GetFixedParameters());
+//	transform->UpdateTransformParameters();
 
 	typedef itk::Image<int, 3> ImageType;
 	typedef itk::ResampleImageFilter<ImageType,ImageType> ResampleType;

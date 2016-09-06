@@ -23,6 +23,9 @@ Description:
 #include "vtkPolyData.h"
 #include "vtkSphereSource.h"
 #include "vtkProperty.h"
+#include "vtkMatrix4x4.h"
+#include "vtkTransform.h"
+#include "vtkTransformPolyDataFilter.h"
 // for visi
 #include <vtkPolyDataMapper.h>
 #include <vtkActor.h>
@@ -42,198 +45,138 @@ vtkSmartPointer<vtkPolyData> Marching_Connected(vtkImageData* input, double stri
 int FindVTKCoordinateInITK(std::string filename, double* in, double* out);
 int FindITKCoordinateInVTK(std::string filename, double* in, double* out);
 int itkTransformImage(std::string transform_file, std::string in_filename, std::string out_filename);
-
+vtkSmartPointer<vtkMatrix4x4> readITKTransform(std::string filename);
 
 int main(int argc, char** argv)
 {
 
-	std::string dicomdir = "E:/test/head-dicom";
-	std::string niftiname = "E:/test/head.nii";
-
-	// read dicom files
-	auto itk_img1 = itk2vtkReadDicom(dicomdir.c_str());
-	// write to nifti file
-	typedef itk::ImageFileWriter< itk::Image<int,3> > WriterType;
-	WriterType::Pointer writer = WriterType::New();
-	std::string outFileName;
-	outFileName = "E:/test/head.nii";
-	writer->SetFileName(outFileName);
-	writer->UseCompressionOn();
-	writer->SetInput(itk_img1);
-	std::cout << "Writing: " << outFileName << std::endl;
-	writer->Update();
-
 	// registration
 	std::string moving = "E:/test/reference_brain_res.nii";
-	std::string fix = "E:/test/head.nii";
+	std::string fix = "E:/test/user_temp.nii";
 	std::string warp = "E:/test/moved_reference.nii";
 	std::string moving_brain = "E:/test/reference_brain_aal.nii";
 	std::string warp_brain = "E:/test/moved_reference_brain.nii";
 	std::string preffix = "E:/test/moved_transform";
 	//itkRegistrationTest( moving, fix, warp, preffix,moving_brain,warp_brain);
 
-	//transform points
-	std::vector<double*> list;
-	double pp[][3] = 
-	{ 	{-72.2834,1.5069,-57.318 },
-		{-48.982,-74.945,-25.526},
-		{5.2913,-109.121,-58.876},
-		{59.924,-76.659,-25.647},
-		{87.947,-0.1983,-60.755} };
 
+	double pp[5][3] = {
+		{ -74.28785565024133, 1.852807051680778, -57.697169892541396 },
+		{ -45.71499559323904, -79.42181459334893, -26.760723328753894 },
+		{ 4.470394992086342, -111.07725729165594, -59.13879565169253 },
+		{ 60.48465217481051, -78.3687979299389, -26.61622868170861 },
+		{ 90.38648776152144, -1.4701530046301838, -56.11362240402192 }
+	};
+	std::vector<double* > points;
 	for (size_t i = 0; i < 5; i++)
 	{
-		double * temp = new double(3);
-
-		// transform to itk coordiante
-		//FindVTKCoordinateInITK(moving.c_str(), pp[i], temp);
-
-		list.push_back(pp[i]);
+		points.push_back(pp[i]);
 	}
 
-	double pp2[][3]
+	itkTransform(points, preffix+"Affine.txt");
+
+
+
+	auto vtkreader = itk::ImageFileReader<itk::Image<int, 3> >::New();
+	vtkreader->SetFileName(fix.c_str());
+	vtkreader->Update();
+	auto fix_image = vtkSmartPointer<vtkImageData>::New();
+	fix_image = itk2vtkCoordinate(vtkreader->GetOutput());
+	auto fix_poly = Marching_Connected(fix_image, 10);
+	std::cout << "Marching 1 done" << std::endl;
+
+	/*	
+	//itkTransformImage(preffix + "Affine.txt", moving, "E:/test/resample_reference.nii");
+	auto vtkreader2 = itk::ImageFileReader<itk::Image<int, 3> >::New();
+	vtkreader2->SetFileName(moving.c_str()); //("E:/test/resample_reference.nii");// 
+	vtkreader2->Update();
+	auto moving_image = vtkSmartPointer<vtkImageData>::New();
+	moving_image = itk2vtkCoordinate(vtkreader2->GetOutput());
+	auto moving_poly = Marching_Connected(moving_image, 10);
+	std::cout << "Marching 2 done" << std::endl;
+
+	auto vtkreader3 = itk::ImageFileReader<itk::Image<int, 3> >::New();
+	vtkreader3->SetFileName(warp.c_str());
+	vtkreader3->Update();
+	auto warp_image = vtkSmartPointer<vtkImageData>::New();
+	warp_image = itk2vtkCoordinate(vtkreader3->GetOutput());
+	auto warp_poly = Marching_Connected(warp_image, 10);
+	std::cout << "Marching 3 done" << std::endl;
+
+
+	vtkSmartPointer<vtkMatrix4x4> mat = readITKTransform(preffix + "Affine.txt");
+	for (size_t i = 0; i < 4; i++)
 	{
-		{115.154, 209.358, 33.1324 },
-		{ 53.4593, 171.363, 69.5877, },
-		{ 27.4593, 199.137, 122.67 },
-		{ 136.621, 211.747, 195.237 },
-		{ 67.202, 172.043, 174.883 }
-	};
-	std::vector<double*> list2;
-	for (size_t i = 0; i < 5; i++)
-	{
-		double *temp = new double(3);
-		memcpy(temp,list[i],sizeof(double)*3);
-		list2.push_back(temp);
-		//list2.push_back(pp2[i]);
-	}
-
-
-	itkTransform(list2, preffix+"Affine.txt");
-
-	std::cout << "List:" << std::endl;
-	for (auto it = list.begin(); it != list.end(); ++it)
-	{
-		for (int i = 0; i < 3; i++)
-			std::cout << (*it)[i] << ",";
-	}
-	std::cout << std::endl << "List2:" << std::endl;
-	for (auto it = list2.begin(); it != list2.end(); ++it)
-	{
-		for (int i = 0; i < 3; i++)
-			std::cout << (*it)[i] << ",";
-	}
-
-	// fill hole
-	std::string filled_name = "E:/test/filled_skin.nii";  // use this file to extract skin surface
-	//fillHoleFilter(fix, warp_brain, filled_name,50);
-
-	//run marchingcubes
-	typedef itk::ImageFileReader<itk::Image<int, 3> > ITKReaderType;
-	auto itkreader1 = ITKReaderType::New();
-	itkreader1->SetFileName(moving); itkreader1->Update();
-	auto vtk_img = itk2vtkCoordinate(itkreader1->GetOutput());
-	auto suf = Marching_Connected(vtk_img, 10);
-
-
-	auto itkreader2 = ITKReaderType::New();
-	itkreader2->SetFileName(fix); itkreader2->Update();
-	auto vtk_img2 = itk2vtkCoordinate(itkreader2->GetOutput());
-	auto suf2 = Marching_Connected(vtk_img2, 50);
-
-
-	auto write_stl = [](vtkSmartPointer<vtkPolyData> suf, std::string filename)
-	{
-		std::cout << "Writing to  " << filename << std::endl;
-		auto stl_writer = vtkSmartPointer< vtkSTLWriter>::New();
-		stl_writer->SetInputData(suf);
-		stl_writer->SetFileName(filename.c_str());
-		stl_writer->Update();
-	};
-
-	//write_stl(suf,"E:/test/fix.stl");
-	write_stl(suf2, "E:/test/resampled.stl");
-
-
-	auto create_ball_actors = [](std::vector<double*> list)
-	{
-		// ball
-		auto createBall = []()
+		for (size_t j = 0; j < 4; j++)
 		{
-			auto ball = vtkSmartPointer<vtkSphereSource>::New();
-			ball->SetCenter(0.0, 0.0, 0.0);
-			ball->SetThetaResolution(50);
-			ball->SetRadius(5.0);
-			ball->Update();
-			auto ballMapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-			ballMapper->SetInputData(ball->GetOutput());
-			auto ballActor = vtkSmartPointer<vtkActor>::New();
-			ballActor->SetMapper(ballMapper);
-			ballActor->GetProperty()->SetColor(1, 0, 0);
-			return ballActor;
-		};
-
-		std::vector<vtkSmartPointer<vtkActor> > ball1;
-		for (auto it = list.begin(); it != list.end(); ++it)
-		{
-			auto bb = createBall();
-			bb->SetPosition(*it);
-			ball1.push_back(bb);
+			std::cout << mat->GetElement(i,j) << ",";
 		}
-		return ball1;
-	};
-
-	auto ball_list1 = create_ball_actors(list); 
-	auto ball_list2 = create_ball_actors(list2);
-
-
-	//skin actor
-	auto skin_mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-	skin_mapper->SetInputData(suf);
-	auto skin_actor = vtkSmartPointer<vtkActor>::New();
-	skin_actor->SetMapper(skin_mapper);
-
-
-
-	//renderer1
-	vtkSmartPointer<vtkRenderer> renderer =
-		vtkSmartPointer<vtkRenderer>::New();
-	renderer->AddActor(skin_actor);
-	for (auto it = ball_list1.begin(); it != ball_list1.end(); ++it)
-	{
-		renderer->AddActor((*it));
+		std::cout << std::endl;
 	}
-	//renderer->AddActor(skin_actorx);
+	// transform
+	auto transform = vtkSmartPointer<vtkTransform>::New();
+	transform->SetMatrix(mat);
+	transform->Update();
 
-	// skin 2
-	auto skin_mapper2 = vtkSmartPointer<vtkPolyDataMapper>::New();
-	skin_mapper2->SetInputData(suf2);
-	auto skin_actor2 = vtkSmartPointer<vtkActor>::New();
-	skin_actor2->SetMapper(skin_mapper2);
-	// renderer2
-	vtkSmartPointer<vtkRenderer> renderer2 =
-		vtkSmartPointer<vtkRenderer>::New();
-	renderer2->AddActor(skin_actor2);
-	for (auto it = ball_list2.begin(); it != ball_list2.end(); ++it)
+	vtkSmartPointer<vtkTransformPolyDataFilter> transformFilter =
+		vtkSmartPointer<vtkTransformPolyDataFilter>::New();
+	transformFilter->SetInputData(moving_poly);
+	transformFilter->SetTransform(transform);
+	transformFilter->Update();
+	moving_poly = transformFilter->GetOutput();
+
+
+
+
+	auto mapper2 = vtkSmartPointer<vtkPolyDataMapper>::New();
+	mapper2->SetInputData(moving_poly);
+	auto actor2 = vtkSmartPointer<vtkActor>::New();
+	actor2->SetMapper(mapper2);
+	
+	auto mapper3 = vtkSmartPointer<vtkPolyDataMapper>::New();
+	mapper3->SetInputData(warp_poly);
+	auto actor3 = vtkSmartPointer<vtkActor>::New();
+	actor3->SetMapper(mapper3);
+	*/
+	auto mapper1 = vtkSmartPointer<vtkPolyDataMapper>::New();
+	mapper1->SetInputData(fix_poly);
+	auto actor1 = vtkSmartPointer<vtkActor>::New();
+	actor1->SetMapper(mapper1);
+
+	auto renderer = vtkSmartPointer<vtkRenderer>::New();
+	auto renderer2 = vtkSmartPointer<vtkRenderer>::New();
+	auto renWin = vtkSmartPointer<vtkRenderWindow>::New();
+	auto interactor = vtkSmartPointer<vtkRenderWindowInteractor>::New();
+	renWin->AddRenderer(renderer);
+	renderer->SetViewport(0, 0, 0.5, 1);
+	renWin->AddRenderer(renderer2);
+	renderer2->SetViewport(0.5, 0, 1, 1);
+	interactor->SetRenderWindow(renWin);
+	
+	renderer->AddActor(actor1);
+	
+	for (size_t i = 0; i < 5; i++)
 	{
-		renderer2->AddActor((*it));
+		auto sphereSrc = vtkSmartPointer<vtkSphereSource>::New();
+		sphereSrc->SetRadius(5);
+		sphereSrc->Update();
+		auto sphere = sphereSrc->GetOutput();
+		auto spmapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+		spmapper->SetInputData(sphere);
+		auto spActor = vtkSmartPointer<vtkActor>::New();
+		spActor->SetMapper(spmapper);
+		spActor->SetPosition(points[i]);
+		renderer->AddActor(spActor);
 	}
 
 
-	vtkSmartPointer<vtkRenderWindow> renwin =
-		vtkSmartPointer<vtkRenderWindow>::New();
-	renwin->AddRenderer(renderer);
-	renderer->SetViewport(0,0,0.5,1);
+	
 
-	renwin->AddRenderer(renderer2);
-	renderer2->SetViewport(0.5, 0, 1,1);
+	//renderer2->AddActor(actor1);
+	//renderer2->AddActor(actor3);
 
-	vtkSmartPointer<vtkRenderWindowInteractor> iren =
-		vtkSmartPointer<vtkRenderWindowInteractor>::New();
-	iren->SetRenderWindow(renwin);
-	iren->Initialize();
-	iren->Start();
-
+	renWin->Render();
+	interactor->Start();
 
 	return 0;
 }
