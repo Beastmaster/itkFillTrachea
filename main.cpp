@@ -47,7 +47,9 @@ int FindITKCoordinateInVTK(std::string filename, double* in, double* out);
 int itkTransformImage(std::string transform_file, std::string in_filename, std::string out_filename);
 vtkSmartPointer<vtkMatrix4x4> readITKTransform(std::string filename);
 
-int main(int argc, char** argv)
+
+
+int maintest(int argc, char** argv)
 {
 
 	// registration
@@ -125,9 +127,6 @@ int main(int argc, char** argv)
 	transformFilter->Update();
 	moving_poly = transformFilter->GetOutput();
 
-
-
-
 	auto mapper2 = vtkSmartPointer<vtkPolyDataMapper>::New();
 	mapper2->SetInputData(moving_poly);
 	auto actor2 = vtkSmartPointer<vtkActor>::New();
@@ -163,7 +162,51 @@ int main(int argc, char** argv)
 	interactor->Start();
 
 	return 0;
+};
+
+
+
+/*
+moving: brain tempalte
+fix: fixed image
+warp: transformed brain template
+preffix: transform file preffix : [preffix]Affine.txt
+brain: brain segmentation
+warped_brain: transformed brain
+filled: hole fill result
+
+parameter example:
+
+*/
+int main(int argc, char** argv)
+{
+	if(argc<7)
+	{
+		std::cout<<"No enough input parameters"<<std::endl;
+		return 1;
+	}
+
+	//registration
+	std::string moving = argv[1];
+	std::string fix = argv[2];
+	std::string warp = argv[3];
+	std::string preffix = argv[4];
+	std::string brain = argv[5];
+	std::string warped_brain = argv[6];
+	itkRegistrationTest(moving,fix,warp,preffix,brain,warped_brain);
+
+
+    // use brain to fill holes
+	std::string ori_name = fix;
+	std::string brainx = warped_brain;
+	std::string filled = argv[7];
+	int threshold = 315;
+
+	return fillHoleFilter(ori_name, brainx, filled, threshold);
+
 }
+
+
 
 
 

@@ -306,8 +306,7 @@ int fillHoleFilter(std::string ori_name,std::string brain, std::string filled,in
 		std::cout << "Writing to file process error!" << std::endl;
 		std::cout << e;
 	}
-
-
+	
 	return 0;
 }
 

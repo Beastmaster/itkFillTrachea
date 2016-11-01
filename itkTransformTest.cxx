@@ -26,6 +26,7 @@ Description:
 #include "itkResampleImageFilter.h"
 #include "itkImageFileReader.h"
 #include "itkImageFileWriter.h"
+#include "itkPointSet.h"
 
 #include <vtkSmartPointer.h>
 #include <vtkTransform.h>
@@ -42,7 +43,7 @@ Description:
 
 
 
-/*
+/*          #### NOt tested yet
 Input:
 	list	: A list of 3d point tobe transformed. The coordinate are ITK system
 	filename: The file generated from itkRegistrationTest function.
@@ -102,34 +103,31 @@ int itkTransform(std::vector<double*>& list , std::string filename)
 
 	tt->Print(std::cout);
 
-	typedef itk::AffineTransform <double, 3> TransformType;
-	//typedef itk::MatrixOffsetTransformBase<double, 3> TransformType;
-
-	typedef itk::CompositeTransform< double, 3 > CompositeTransformType;
-	CompositeTransformType::Pointer composite = CompositeTransformType::New();
+	//typedef itk::AffineTransform <double, 3> TransformType;
+	typedef itk::MatrixOffsetTransformBase<double, 3> TransformType;
 
 	auto transform = TransformType::New();
 	transform->SetIdentity();
 	transform->SetParameters(tt->GetParameters());
 	transform->SetFixedParameters(tt->GetFixedParameters());
+	transform->Print(std::cout);
+	
+	auto n_transform = TransformType::New();
+	n_transform->UpdateTransformParameters(transform->GetInverseTransform()->GetParameters());
 
-	composite->AddTransform(transform->GetInverseTransform());
-
-	auto matrix = transform->GetMatrix();
+	auto matrix = transform->GetInverseMatrix();
 	auto center = transform->GetCenter();
 	auto offset = transform->GetOffset();
+	auto translation = transform->GetTranslation();
 
-	 
+	auto reverse = transform->GetInverseTransform();
+	typedef float PixelType;
+    const unsigned int Dimension = 3;
+    typedef itk::PointSet< PixelType, Dimension >   PointSetType;
+    typedef PointSetType::PointType PointType;
 	for (auto it = list.begin(); it != list.end(); ++it)
 	{
-		//auto point = transform->TransformPoint(*it);
-		//auto point = transform->BackTransformPoint(*it);
-		auto point = composite->TransformPoint(*it);
-
-		(*it)[0] = point[0];// + offset[0];
-		(*it)[1] = point[1];// + offset[1];
-		(*it)[2] = point[2];// + offset[2];
-
+		transform->TransformPoint((*it));
 	}
 	return 0;
 }
@@ -191,8 +189,8 @@ vtkSmartPointer<vtkMatrix4x4> readITKTransform(std::string filename)
 	//typedef itk::AffineTransform <double, 3> TransformType;
 	typedef itk::MatrixOffsetTransformBase<double, 3> TransformType;
 
-	typedef itk::CompositeTransform< double, 3 > CompositeTransformType;
-	CompositeTransformType::Pointer composite = CompositeTransformType::New();
+	//typedef itk::CompositeTransform< double, 3 > CompositeTransformType;
+	//CompositeTransformType::Pointer composite = CompositeTransformType::New();
 
 	auto transform = TransformType::New();
 	transform->SetIdentity();
@@ -286,11 +284,6 @@ int itkTransformImage(std::string transform_file, std::string in_filename, std::
 	auto tt = read_transform(transform_file);
 
 	typedef itk::AffineTransform <double, 3> TransformType;
-
-
-	typedef itk::CompositeTransform< double, 3 > CompositeTransformType;
-	CompositeTransformType::Pointer composite = CompositeTransformType::New();
-
 	auto transform = TransformType::New();
 	transform->SetParameters(tt->GetParameters());
 	transform->SetFixedParameters(tt->GetFixedParameters());

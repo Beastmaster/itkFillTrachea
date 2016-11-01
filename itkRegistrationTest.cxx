@@ -57,15 +57,21 @@ int itkRegistrationTest(std::string moving, std::string fix, std::string warp, s
 	std::string moving_brain = brain;
 	std::string warp_brain = warped_brain;
 
+#ifdef _WIN32
 	const std::string ANTs_exe = "ANTs.exe";
 	const std::string WarpImage_exe = "WarpImageMultiTransform.exe";
+#else
+	const std::string ANTs_exe = "./ANTs";
+	const std::string WarpImage_exe = "./WarpImageMultiTransform";
+#endif
+
 	std::string cmd1 = ANTs_exe + " 3 -m MI[\"";
 	cmd1.append(fix_name); cmd1.append("\",\""); cmd1.append(moving_name); cmd1.append("\",1,32] -i 0 -o \""); cmd1.append(warp_prefix); cmd1.append("\" --rigid-affine false \n");
 	std::string cmd2 = WarpImage_exe + " 3 ";
 	cmd2.append(moving_name); cmd2.append(" "); cmd2.append(warp_name); cmd2.append(" "); cmd2.append(affine_txt); cmd2.append(" -R "); cmd2.append(fix_name);
 	
 	std::string cmd3 = WarpImage_exe + " 3 ";
-	cmd3.append(moving_brain); cmd3.append(" "); cmd3.append(warp_brain); cmd3.append(" "); cmd3.append(affine_txt); cmd3.append(" -R "); cmd3.append(fix_name);
+	cmd3.append(moving_brain); cmd3.append(" "); cmd3.append(warp_brain); cmd3.append(" "); cmd3.append(affine_txt); cmd3.append(" -R "); cmd3.append(fix_name);cmd3.append(" --use-NN");
 
 	std::cout << "=======================Runing command1 ====================\n" << cmd1 << std::endl;
 	system(cmd1.c_str());

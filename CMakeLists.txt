@@ -1,9 +1,10 @@
 cmake_minimum_required(VERSION 2.8)
 
 set(PRJ connectArea)
-
 project(${PRJ})
  
+set (CMAKE_CXX_STANDARD 11)
+
 find_package(ITK REQUIRED)
 include(${ITK_USE_FILE})
 find_package(VTK REQUIRED)
@@ -30,7 +31,7 @@ include(${VTK_USE_FILE})
  
 add_executable(${PRJ} MACOSX_BUNDLE ${SRCS} ${HEAD})
 
-target_link_libraries(${PRJ} ITKReview  ${ITK_LIBRARIES})
+target_link_libraries(${PRJ} ${ITK_LIBRARIES})
 target_link_libraries(${PRJ} ${VTK_LIBRARIES})
 
 
